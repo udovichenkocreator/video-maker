@@ -30,13 +30,14 @@ async def merge(payload: dict):
         with open(aud_path, "wb") as f:
             f.write(requests.get(audio_url).content)
 
-        # Создаём видео
-        image = ImageClip(img_path).set_duration(30)  # макс 30 сек
-        audio = AudioFileClip(aud_path)
-        final_duration = min(30, audio.duration)
-        final = image.set_audio(audio).subclip(0, final_duration)
-
-        # Экспортируем
+       # Масштабируем изображение под вертикальный формат
+        image = ImageClip(img_path).resize(height=1920).resize(width=1080)
+        image.duration = min(30, audio.duration)
+        
+        # Привязываем аудио
+        final = image.set_audio(audio).subclip(0, audio.duration)
+        
+        # Экспортируем с оптимизациями для YouTube Shorts
         final.write_videofile(
             out_path,
             codec="libx264",
@@ -44,7 +45,12 @@ async def merge(payload: dict):
             temp_audiofile=f"/tmp/{job_id}_temp.mp4",
             remove_temp=True,
             logger=None,
-            fps=24
+            fps=30,
+            audio_fps=44100,
+            preset="medium",
+            audio_bitrate="128k",
+            bitrate="5000k",
+            threads=2
         )
 
         return FileResponse(out_path, media_type="video/mp4", filename="output.mp4")
