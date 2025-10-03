@@ -2,7 +2,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 import requests
 import os
-from moviepy.editor import ImageClip, AudioFileClip
+from moviepy.video.VideoClip import ImageClip
+from moviepy.audio.io.AudioFileClip import AudioFileClip
 import uuid
 
 app = FastAPI()
