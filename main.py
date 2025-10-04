@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 import requests
 import os
-from moviepy.video.io.ImageClip import ImageClip
+from moviepy.video.VideoClip import ImageClip
 from moviepy.audio.io.AudioFileClip import AudioFileClip
 import uuid
 
@@ -30,15 +30,19 @@ async def merge(payload: dict):
         with open(aud_path, "wb") as f:
             f.write(requests.get(audio_url).content)
 
-        # Создаём видео
-        image = ImageClip(img_path)
-        image.duration = 30  # Устанавливаем длительность вручную
-
+        # Загружаем аудио, чтобы узнать длительность
         audio = AudioFileClip(aud_path)
-        final_duration = min(30, audio.duration)
-        final = image.subclip(0, final_duration).set_audio(audio)
 
-        # Экспортируем
+        # Загружаем изображение
+        image = ImageClip(img_path)
+
+        # Устанавливаем длительность изображения равной длительности аудио
+        image.duration = audio.duration
+
+        # Привязываем аудио
+        final = image.set_audio(audio)
+
+        # Экспортируем видео для YouTube Shorts
         final.write_videofile(
             out_path,
             codec="libx264",
