@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 import requests
 import os
-from moviepy.video.VideoClip import ImageClip
+from moviepy.video.io.ImageClip import ImageClip
 from moviepy.audio.io.AudioFileClip import AudioFileClip
 import uuid
 
@@ -12,7 +12,7 @@ app = FastAPI()
 async def merge(payload: dict):
     image_url = payload.get("image_url")
     audio_url = payload.get("audio_url")
-    
+
     if not image_url or not audio_url:
         raise HTTPException(status_code=400, detail="image_url and audio_url required")
 
@@ -25,19 +25,20 @@ async def merge(payload: dict):
         # Скачиваем картинку
         with open(img_path, "wb") as f:
             f.write(requests.get(image_url).content)
-        
+
         # Скачиваем аудио
         with open(aud_path, "wb") as f:
             f.write(requests.get(audio_url).content)
 
-       # Масштабируем изображение под вертикальный формат
-        image = ImageClip(img_path).resize(height=1920).resize(width=1080)
-        image.duration = min(30, audio.duration)
-        
-        # Привязываем аудио
-        final = image.set_audio(audio).subclip(0, audio.duration)
-        
-        # Экспортируем с оптимизациями для YouTube Shorts
+        # Создаём видео
+        image = ImageClip(img_path)
+        image.duration = 30  # Устанавливаем длительность вручную
+
+        audio = AudioFileClip(aud_path)
+        final_duration = min(30, audio.duration)
+        final = image.subclip(0, final_duration).set_audio(audio)
+
+        # Экспортируем
         final.write_videofile(
             out_path,
             codec="libx264",
