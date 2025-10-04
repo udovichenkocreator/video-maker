@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
+from fastapi.staticfiles import StaticFiles
 import requests
 import os
 from moviepy.video.VideoClip import ImageClip
@@ -7,6 +8,13 @@ from moviepy.audio.io.AudioFileClip import AudioFileClip
 import uuid
 
 app = FastAPI()
+
+# Папка для хранения готовых видео
+VIDEO_DIR = "/tmp/videos"
+os.makedirs(VIDEO_DIR, exist_ok=True)
+
+# Подключаем статические файлы
+app.mount("/files", StaticFiles(directory=VIDEO_DIR), name="files")
 
 @app.post("/merge")
 async def merge(payload: dict):
@@ -19,7 +27,7 @@ async def merge(payload: dict):
     job_id = str(uuid.uuid4())
     img_path = f"/tmp/{job_id}.jpg"
     aud_path = f"/tmp/{job_id}.mp3"
-    out_path = f"/tmp/{job_id}.mp4"
+    out_path = f"{VIDEO_DIR}/{job_id}.mp4"  # Сохраняем в VIDEO_DIR
 
     try:
         # Скачиваем картинку
@@ -32,13 +40,8 @@ async def merge(payload: dict):
 
         # Загружаем аудио, чтобы узнать длительность
         audio = AudioFileClip(aud_path)
-
         # Загружаем изображение
-        image = ImageClip(img_path)
-
-        # Устанавливаем длительность изображения равной длительности аудио
-        image.duration = audio.duration
-
+        image = ImageClip(img_path, duration=audio.duration)
         # Привязываем аудио
         final = image.set_audio(audio)
 
@@ -58,12 +61,16 @@ async def merge(payload: dict):
             threads=2
         )
 
-        return FileResponse(out_path, media_type="video/mp4", filename="output.mp4")
+        # Генерируем URL
+        video_url = f"https://video-maker-dnah.onrender.com/files/{job_id}.mp4"
+
+        return {"url": video_url}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
     finally:
         # Очистка
-        for f in [img_path, aud_path, out_path]:
+        for f in [img_path, aud_path]:
             if os.path.exists(f):
                 os.remove(f)
+        # Не удаляем out_path — он нужен для доступа по URL
