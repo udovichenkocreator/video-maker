@@ -43,7 +43,7 @@ async def merge(payload: dict):
         # Загружаем изображение
         image = ImageClip(img_path, duration=audio.duration)
         # Привязываем аудио
-        final = image.set_audio(audio)
+        final = image.with_audio(audio)
 
         # Экспортируем видео для YouTube Shorts
         final.write_videofile(
