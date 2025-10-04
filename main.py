@@ -3,8 +3,7 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 import requests
 import os
-from moviepy.video.VideoClip import ImageClip
-from moviepy.audio.io.AudioFileClip import AudioFileClip
+from moviepy.editor import ImageClip, AudioFileClip  # Используем editor
 import uuid
 
 app = FastAPI()
@@ -15,6 +14,13 @@ os.makedirs(VIDEO_DIR, exist_ok=True)
 
 # Подключаем статические файлы
 app.mount("/files", StaticFiles(directory=VIDEO_DIR), name="files")
+
+@app.get("/wakeup")
+async def wakeup():
+    """
+    Пробуждающий эндпоинт. Отправь любой GET-запрос сюда перед /merge.
+    """
+    return {"status": "ok", "message": "Service is awake!"}
 
 @app.post("/merge")
 async def merge(payload: dict):
@@ -43,7 +49,7 @@ async def merge(payload: dict):
         # Загружаем изображение
         image = ImageClip(img_path, duration=audio.duration)
         # Привязываем аудио
-        final = image.with_audio(audio)
+        final = image.set_audio(audio)
 
         # Экспортируем видео для YouTube Shorts
         final.write_videofile(
